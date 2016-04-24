@@ -1,0 +1,19 @@
+{
+  "name": "bitcore-common-blockchain",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test"
+  },
+  "author": "Alexey Kudinkin <alexey.kudinkin@gmail.com> (http://github.com/alexeykudinkin)",
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "sinon": "^1.17.3"
+  },
+  "dependencies": {
+    "async": "^1.5.2",
+    "bitcore-lib": "^0.13.15"
+  }
+}
