@@ -1,7 +1,7 @@
 {
   "name": "bitcore-common-blockchain",
   "version": "1.0.0",
-  "description": "",
+  "description": "common blockchain service for bitcore-node",
   "main": "index.js",
   "scripts": {
     "test": "mocha test"
