@@ -1,11 +1,12 @@
 'use strict';
 
-var BaseService = require('./service');
 var inherits = require('util').inherits;
 
 var async = require('async');
+var cbRouter = require('cb-express-router')
 
 var bitcore = require('bitcore-lib');
+var BaseService = require('./service');
 
 var Transaction = bitcore.Transaction;
 
@@ -70,6 +71,8 @@ CommonBlockchainService.prototype.setupRoutes = function (app, express) {
     extended: true
   }));
 
+  app.use(cbRouter(this));
+
   function extractAddresses(addrs) {
     if (!addrs) return null;
 
@@ -85,175 +88,6 @@ CommonBlockchainService.prototype.setupRoutes = function (app, express) {
       return JSUtil.isHexa(txId);
     });
   }
-
-
-  //
-  // addresses#summary
-  //
-  app.get('/addresses/summary/:addrs', function (req, res) {
-    var addrs = extractAddresses(req.params.addrs);
-
-    if (!addrs || addrs.length === 0)
-      return res.status(404).send('Sorry, we cannot find that addresses!\n' + JSON.stringify(req.params.addrs)).end();
-
-    self.addresses.summary(addrs, function (err, result) {
-      if (!err)
-        res.json(result);
-      else
-        res.status(500).send('Sorry, something blew up!\n' + err);
-
-      res.end();
-    });
-  });
-
-
-  //
-  // addresses#transactions
-  //
-  app.get('/addresses/transactions/:addrs', function (req, res) {
-    var addrs = extractAddresses(req.params.addrs);
-
-    if (!addrs || addrs.length === 0)
-      return res.status(404).send('Sorry, we cannot find that addresses!\n' + JSON.stringify(req.params.addrs)).end();
-
-    self.addresses.transactions(addrs, req.query.blockHeight, function (err, result) {
-      if (!err)
-        res.json(result);
-      else
-        res.status(500).send('Sorry, something blew up!\n' + err);
-
-      res.end();
-    });
-  });
-
-  //
-  // addresses#unspents
-  //
-  app.get('/addresses/unspents/:addrs', function (req, res) {
-    var addrs = extractAddresses(req.params.addrs);
-
-    if (!addrs || addrs.length === 0)
-      return res.status(404).send('Sorry, we cannot find that addresses!\n' + JSON.stringify(req.params.addrs)).end();
-
-    self.addresses.unspents(addrs, function (err, result) {
-      if (!err)
-        res.json(result);
-      else
-        res.status(500).send('Sorry, something blew up!\n' + err);
-
-      res.end();
-    });
-  });
-
-
-  //
-  // transactions#get
-  //
-  app.get('/transactions/get/:txIds', function (req, res) {
-    var txIds = extractHexs(req.params.txIds);
-
-    if (!txIds || txIds.length === 0)
-      return res.status(404).send('Sorry, we cannot find that transactions!\n' + JSON.stringify(req.params.txIds)).end();
-
-    self.transactions.get(txIds, function (err, result) {
-      if (!err)
-        res.json(result);
-      else
-        res.status(500).send('Sorry, something blew up!\n' + err);
-
-      res.end();
-    });
-  });
-
-  //
-  // transactions#summary
-  //
-  app.get('/transactions/summary/:txIds', function (req, res) {
-    var txIds = extractHexs(req.params.txIds);
-
-    if (!txIds || txIds.length === 0)
-      return res.status(404).send('Sorry, we cannot find that transactions!\n' + JSON.stringify(req.params.txIds)).end();
-
-    self.transactions.summary(txIds, function (err, result) {
-      if (!err)
-        res.json(result);
-      else
-        res.status(500).send('Sorry, something blew up!\n' + err);
-
-      res.end();
-    });
-  });
-
-  //
-  // transactions#unconfirmed (TODO)
-  //
-
-  //
-  // transactions#propagate
-  //
-  app.post('/transactions/propagate', function (req, res) {
-    var hex = req.body.hex;
-
-    if (!hex)
-      return res.status(400).send('No TX hex found!\n' + JSON.stringify(req.body)).end();
-
-    self.transactions.propagate([ hex ], function (err, result) {
-      if (!err)
-        res.json(result);
-      else
-        res.status(500).send('Sorry, something blew up!\n' + err);
-
-      res.end();
-    });
-  });
-
-
-  //
-  // blocks#get
-  //
-  app.get('/blocks/get/:hashes', function (req, res) {
-    var hashes = extractHexs(req.params.hashes);
-
-    if (!hashes || hashes.length === 0)
-      return res.status(404).send('Sorry, we cannot find that blocks!\n' + JSON.stringify(req.params.hashes)).end();
-
-    self.blocks.get(hashes, function (err, result) {
-      if (!err)
-        res.json(result);
-      else
-        res.status(500).send('Sorry, something blew up!\n' + err);
-
-      res.end();
-    });
-  });
-
-  //
-  // blocks#summary
-  //
-  app.get('/blocks/get/:hashes', function (req, res) {
-    var hashes = extractHexs(req.params.hashes);
-
-    if (!hashes || hashes.length === 0)
-      return res.status(404).send('Sorry, we cannot find that blocks!\n' + JSON.stringify(req.params.hashes)).end();
-
-    self.blocks.summary(hashes, function (err, result) {
-      if (!err)
-        res.json(result);
-      else
-        res.status(500).send('Sorry, something blew up!\n' + err);
-
-      res.end();
-    });
-  });
-
-  //
-  // blocks#latest (TODO)
-  //
-
-  //
-  // blocks#propagate (TODO)
-  //
-
 };
 
 CommonBlockchainService.prototype.getRoutePrefix = function () {
