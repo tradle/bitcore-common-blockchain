@@ -211,6 +211,12 @@ Transactions.prototype.get = function (txids, callback) {
     txids,
     function (txid, reduce) {
       self.parent.node.services.db.getTransactionWithBlockInfo(txid, /* queryMempool = */ false, function (err, tx) {
+        if (!err && tx) {
+          // getTransactionWithBlockInfo sometimes returns a bogus transaction
+          // for transactions that don't exist
+          if (tx.hash !== txid) err = new Error('transaction not found')
+        }
+
         reduce(err, !err && {
           txId: tx.hash,
           blockId: tx.__blockHash,
