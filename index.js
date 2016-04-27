@@ -161,23 +161,19 @@ Addresses.prototype.transactions = function (addresses, blockHeight, callback) {
   };
 
   self.parent.node.services.address.getAddressHistory(addresses, options, function (err, result) {
-    if (!err) {
-      async.map(
-        result['items'] || [], function (item, reduce) {
-          var tx = item.tx;
+    if (err) return callback(err)
 
-          reduce(null, {
-            blockHeight:  item.height,
-            blockId:      tx.blockHash,
-            txId:         tx.id,
-            txHex:        tx.serialize(/* unsafe = */ true)
-          });
-        },
-        callback
-      );
-    } else {
-      callback(err, result);
-    }
+    result = (result.items || []).map(function (item) {
+      var tx = item.tx;
+      return {
+        blockHeight:  item.height,
+        blockId:      tx.blockHash,
+        txId:         tx.id,
+        txHex:        tx.serialize(/* unsafe = */ true)
+      }
+    })
+
+    callback(null, result)
   })
 };
 
@@ -196,22 +192,19 @@ Addresses.prototype.unspents = function (addresses, callback) {
   var self = this;
 
   self.parent.node.services.address.getUnspentOutputs(addresses, /* queryMempool = */ false, function (err, result) {
-    if (!err) {
-      async.map(
-        result || [], function (unspent, reduce) {
-          reduce(err, {
-            address:        unspent.address,
-            txId:           unspent.txid,
-            confirmations:  unspent.confirmations,
-            value:          unspent.satoshis,
-            vout:           unspent.outputIndex
-          })
-        },
-        callback
-      );
-    } else {
-      callback(err, result);
-    }
+    if (err) return callback(err)
+
+    result = (result || []).map(function (unspent) {
+      return {
+        address:        unspent.address,
+        txId:           unspent.txid,
+        confirmations:  unspent.confirmations,
+        value:          unspent.satoshis,
+        vout:           unspent.outputIndex
+      }
+    })
+
+    callback(null, result)
   })
 };
 
