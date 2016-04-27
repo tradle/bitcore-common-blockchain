@@ -48,7 +48,7 @@ describe('Common Blockchain Interface', function () {
 
     node.services.address.getAddressSummary = sinon.stub().callsArgWith(2, null, summary)
 
-    it('should return summary for the address', function (done) {
+    it('should return address summaries', function (done) {
       cbs.addresses.summary([ 'mpkDdnLq26djg17s6cYknjnysAm3QwRzu2' ], function (err, summary) {
         should.not.exist(err)
 
@@ -87,7 +87,7 @@ describe('Common Blockchain Interface', function () {
 
     node.services.address.getAddressHistory = sinon.stub().callsArgWith(2, null, history)
 
-    it('should return history for all transactions for the addresses', function (done) {
+    it('should return the transaction history for the specified addresses', function (done) {
       cbs.addresses.transactions([ 'mgY65WSfEmsyYaYPQaXhmXMeBhwp4EcsQW' ], null, function (err, txs) {
         should.not.exist(err)
 
@@ -118,7 +118,7 @@ describe('Common Blockchain Interface', function () {
 
     node.services.address.getUnspentOutputs = sinon.stub().callsArgWith(2, null, unspentOuts)
 
-    it('should return history for all transactions for the addresses', function (done) {
+    it('should return unspents for specified addresses', function (done) {
       cbs.addresses.unspents([ 'mgY65WSfEmsyYaYPQaXhmXMeBhwp4EcsQW' ], function (err, txs) {
         should.not.exist(err)
 
@@ -148,7 +148,7 @@ describe('Common Blockchain Interface', function () {
 
     var cbs = new CommonBlockchain({ node: node })
 
-    it('should return history for all transactions for the addresses', function (done) {
+    it('should return transaction bodies', function (done) {
       node.services.db.getTransactionWithBlockInfo = sinon.stub().callsArgWith(2, null, tx)
       cbs.transactions.get([ txId ], function (err, txs) {
         should.not.exist(err)
@@ -173,7 +173,7 @@ describe('Common Blockchain Interface', function () {
     var txId = tx.hash
     var cbs = new CommonBlockchain({ node: node })
 
-    it('should return history for all transactions for the addresses', function (done) {
+    it('should return transaction summaries', function (done) {
       node.services.db.getTransactionWithBlockInfo = sinon.stub().callsArgWith(2, null, tx)
       cbs.transactions.summary([ txId ], function (err, txs) {
         should.not.exist(err)
@@ -198,7 +198,7 @@ describe('Common Blockchain Interface', function () {
 
     var cbs = new CommonBlockchain({ node: node })
 
-    it('should return history for all transactions for the addresses', function (done) {
+    it('should return block bodies', function (done) {
       node.services.db.getBlock = sinon.stub().callsArgWith(1, null, block)
       cbs.blocks.get([ '00000000000000000593b60d8b4f40fd1ec080bdb0817d475dae47b5f5b1f735' ], function (err, blocks) {
         should.not.exist(err)
@@ -220,7 +220,7 @@ describe('Common Blockchain Interface', function () {
 
     var cbs = new CommonBlockchain({ node: node })
 
-    it('should return history for all transactions for the addresses', function (done) {
+    it('should return block summaries', function (done) {
       node.services.db.getBlock = sinon.stub().callsArgWith(1, null, block)
       node.services.bitcoind.getBlockIndex = sinon.stub().returns(blockIndex)
 
