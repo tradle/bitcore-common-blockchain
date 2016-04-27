@@ -1,15 +1,13 @@
 'use strict'
 
 var inherits = require('util').inherits
-
 var async = require('async')
+var bodyParser = require('body-parser')
 var cbRouter = require('cb-express-router')
-
 var bitcore = require('bitcore-lib')
 var BaseService = require('./service')
 
 var Transaction = bitcore.Transaction
-
 var JSUtil = bitcore.util.js
 var $ = bitcore.util.preconditions
 
@@ -59,8 +57,6 @@ CommonBlockchainService.prototype.getAPIMethods = function () {
  */
 CommonBlockchainService.prototype.setupRoutes = function (app, express) {
   var self = this
-
-  var bodyParser = require('body-parser')
 
   app.use(bodyParser.json()); // to support JSON-encoded bodies
   app.use(bodyParser.urlencoded({ // to support URL-encoded bodies
