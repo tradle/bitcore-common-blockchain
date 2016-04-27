@@ -41,13 +41,13 @@ CommonBlockchainService.prototype.getAPIMethods = function () {
 
     [ 'transactions#get', this, this.transactions.get, 1 ],
     [ 'transactions#summary', this, this.transactions.summary, 1 ],
-    [ 'transactions#unconfirmed', this, this.transactions.unconfirmed, 0 ],
+    // [ 'transactions#unconfirmed', this, this.transactions.unconfirmed, 0 ],
     [ 'transactions#propagate', this, this.transactions.propagate, 1 ],
 
     [ 'blocks#get', this, this.blocks.get, 1 ],
     [ 'blocks#summary', this, this.blocks.summary, 1 ],
-    [ 'blocks#latest', this, this.blocks.latest, 1 ],
-    [ 'blocks#propagate', this, this.blocks.propagate, 1 ]
+    // [ 'blocks#latest', this, this.blocks.latest, 1 ],
+    // [ 'blocks#propagate', this, this.blocks.propagate, 1 ]
   ]
 }
 
@@ -270,9 +270,9 @@ Transactions.prototype.summary = function (txids, callback) {
  *
  * @param callback
  */
-Transactions.prototype.unconfirmed = function (callback) {
-  throw 'NotImplementedException'
-}
+// Transactions.prototype.unconfirmed = function (callback) {
+//   throw new Error('NotImplementedException')
+// }
 
 /**
  * Propagates supplied transactions (in bitcoin-protocol format) to the blockchain
@@ -370,9 +370,9 @@ Blocks.prototype.summary = function (hashes, callback) {
  *
  * @param callback
  */
-Blocks.prototype.latest = function (callback) {
-  throw 'NotImplementedException'
-}
+// Blocks.prototype.latest = function (callback) {
+//   throw new Error('NotImplementedException')
+// }
 
 /**
  * Propagates supplied transactions (in bitcoin-protocol format) to the blockchain
@@ -380,9 +380,9 @@ Blocks.prototype.latest = function (callback) {
  * @param block
  * @param callback
  */
-Blocks.prototype.propagate = function (block, callback) {
-  throw 'NotImplementedException'
-}
+// Blocks.prototype.propagate = function (block, callback) {
+//   throw new Error('NotImplementedException')
+// }
 
 /**
  * Function which is called when module is first initialized
