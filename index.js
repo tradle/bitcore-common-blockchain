@@ -1,10 +1,12 @@
 'use strict'
 
 var inherits = require('util').inherits
+var EventEmitter = require('events').EventEmitter
 var async = require('async')
 var bodyParser = require('body-parser')
 var cbRouter = require('cb-express-router')
 var bitcore = require('bitcore-lib')
+var Block = bitcore.Block
 var BaseService = require('./service')
 
 var Transaction = bitcore.Transaction
@@ -87,8 +89,11 @@ CommonBlockchainService.prototype.getRoutePrefix = function () {
 }
 
 function CommonBlockchainMicroService (options) {
+  EventEmitter.call(this)
   this.parent = options.parent
 }
+
+inherits(CommonBlockchainMicroService, EventEmitter)
 
 function Addresses (options) {
   CommonBlockchainMicroService.call(this, options)
@@ -298,7 +303,38 @@ Transactions.prototype.propagate = function (txs, callback) {
 }
 
 function Blocks (options) {
+  var self = this
   CommonBlockchainMicroService.call(this, options)
+
+  this.height = null
+  this.tip = null
+  this.once('tip', function () {
+    self.emit('ready')
+  })
+
+  this.parent.node.services.bitcoind.on('tip', function (height) {
+    self.height = height
+    self.parent.node.services.bitcoind.getBlock(height, function (err, buf) {
+      if (err || !buf) return
+
+      self.tip = Block.fromBuffer(buf)
+      tipSummary = null
+      self.emit('tip', self.tip)
+    })
+  })
+
+  // lazy calc tip summary
+  var tipSummary
+  Object.defineProperty(this, 'tipSummary', {
+    get: function () {
+      if (!self.tip) return
+      if (!tipSummary) {
+        tipSummary = self._getBlockSummary(self.tip)
+      }
+
+      return tipSummary
+    }
+  })
 }
 
 inherits(Blocks, CommonBlockchainMicroService)
@@ -336,6 +372,8 @@ Blocks.prototype.get = function (hashes, callback) {
  * @param callback
  */
 Blocks.prototype.summary = function (hashes, callback) {
+  var self = this
+
   // TODO: Replace with `typeforce`
   $.checkArgument(Array.isArray(hashes), 'Must provide an array of block-hashes!')
 
@@ -345,26 +383,29 @@ Blocks.prototype.summary = function (hashes, callback) {
     hashes,
     function (hash, reduce) {
       self.parent.node.services.db.getBlock(hash, function (err, block) {
-        if (err) return reduce(err)
-
-        var blockIndex = self.parent.node.services.bitcoind.getBlockIndex(hash)
-        var blockSize = block.toString().length
-
-        reduce(null, {
-          blockId: block.id,
-          prevBlockId: block.header.prevHash.toString('hex'),
-          merkleRootHash: block.header.merkleRoot.toString('hex'),
-          nonce: block.header.nonce,
-          version: block.header.version,
-          blockHeight: blockIndex.height,
-          blockSize: blockSize,
-          timestamp: block.header.timestamp,
-          txCount: block.transactions.length
-        })
+        reduce(err, !err && self._getBlockSummary(block, hash))
       })
     },
     callback
   )
+}
+
+Blocks.prototype._getBlockSummary = function (block, hash) {
+  hash = hash || block.hash
+  var blockIndex = this.parent.node.services.bitcoind.getBlockIndex(hash)
+  var blockSize = block.toString().length
+
+  return {
+    blockId: block.id,
+    prevBlockId: block.header.prevHash.toString('hex'),
+    merkleRootHash: block.header.merkleRoot.toString('hex'),
+    nonce: block.header.nonce,
+    version: block.header.version,
+    blockHeight: blockIndex.height,
+    blockSize: blockSize,
+    timestamp: block.header.timestamp,
+    txCount: block.transactions.length
+  }
 }
 
 /**
@@ -372,9 +413,16 @@ Blocks.prototype.summary = function (hashes, callback) {
  *
  * @param callback
  */
-// Blocks.prototype.latest = function (callback) {
-//   throw new Error('NotImplementedException')
-// }
+Blocks.prototype.latest = function (callback) {
+  var self = this
+  if (!this.tipSummary) {
+    return this.once('ready', this.latest.bind(this, callback))
+  }
+
+  process.nextTick(function () {
+    callback(null, self.tipSummary)
+  })
+}
 
 /**
  * Propagates supplied transactions (in bitcoin-protocol format) to the blockchain

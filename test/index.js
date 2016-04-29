@@ -1,5 +1,6 @@
 'use strict'
 
+var EventEmitter = require('events').EventEmitter
 var should = require('chai').should()
 var sinon = require('sinon')
 
@@ -14,23 +15,26 @@ var Networks = bitcoreLib.Networks
 var Block = bitcoreLib.Block
 var Transaction = bitcoreLib.Transaction
 
-describe('Common Blockchain Interface', function () {
-  var node = {
+function newNode () {
+  return {
     datadir: 'testdir',
     network: Networks.testnet,
     services: {
       address: {},
       db: {},
-      bitcoind: {}
+      bitcoind: new EventEmitter()
     }
   }
+}
 
+describe('Common Blockchain Interface', function () {
   describe('@constructor', function () {
     // TODO
 
   })
 
   describe('#addresses.summary', function () {
+    var node = newNode()
     var summary = {
       totalReceived: 3487110,
       totalSpent: 0,
@@ -45,7 +49,6 @@ describe('Common Blockchain Interface', function () {
     }
 
     var cbs = new CommonBlockchain({ node: node })
-
     node.services.address.getAddressSummary = sinon.stub().callsArgWith(2, null, summary)
 
     it('should return address summaries', function (done) {
@@ -63,6 +66,7 @@ describe('Common Blockchain Interface', function () {
   })
 
   describe('#addresses.transactions', function () {
+    var node = newNode()
     var history = {
       totalCount: 1, // The total number of items within "start" and "end"
       items: [
@@ -102,6 +106,7 @@ describe('Common Blockchain Interface', function () {
   })
 
   describe('#addresses.unspents', function () {
+    var node = newNode()
     var unspentOuts = [
       {
         address: 'mgY65WSfEmsyYaYPQaXhmXMeBhwp4EcsQW',
@@ -134,6 +139,7 @@ describe('Common Blockchain Interface', function () {
   })
 
   describe('#transactions.get', function () {
+    var node = newNode()
     var tx = new Transaction()
 
     var txHex = '0100000001a08ee59fcd5d86fa170abb6d925d62d5c5c476359681b70877c04f270c4ef246000000008a47304402203fb9b476bb0c37c9b9ed5784ebd67ae589492be11d4ae1612be29887e3e4ce750220741ef83781d1b3a5df8c66fa1957ad0398c733005310d7d9b1d8c2310ef4f74c0141046516ad02713e51ecf23ac9378f1069f9ae98e7de2f2edbf46b7836096e5dce95a05455cc87eaa1db64f39b0c63c0a23a3b8df1453dbd1c8317f967c65223cdf8ffffffff02b0a75fac000000001976a91484b45b9bf3add8f7a0f3daad305fdaf6b73441ea88ac20badc02000000001976a914809dc14496f99b6deb722cf46d89d22f4beb8efd88ac00000000'
@@ -164,6 +170,7 @@ describe('Common Blockchain Interface', function () {
   })
 
   describe('#transactions.summary', function () {
+    var node = newNode()
     var txBuffer = new Buffer('01000000016f95980911e01c2c664b3e78299527a47933aac61a515930a8fe0213d1ac9abe01000000da0047304402200e71cda1f71e087c018759ba3427eb968a9ea0b1decd24147f91544629b17b4f0220555ee111ed0fc0f751ffebf097bdf40da0154466eb044e72b6b3dcd5f06807fa01483045022100c86d6c8b417bff6cc3bbf4854c16bba0aaca957e8f73e19f37216e2b06bb7bf802205a37be2f57a83a1b5a8cc511dc61466c11e9ba053c363302e7b99674be6a49fc0147522102632178d046673c9729d828cfee388e121f497707f810c131e0d3fc0fe0bd66d62103a0951ec7d3a9da9de171617026442fcd30f34d66100fab539853b43f508787d452aeffffffff0240420f000000000017a9148a31d53a448c18996e81ce67811e5fb7da21e4468738c9d6f90000000017a9148ce5408cfeaddb7ccb2545ded41ef478109454848700000000', 'hex')
     var tx = new Transaction().fromBuffer(txBuffer)
     tx.__blockHash = '00000000000ec715852ea2ecae4dc8563f62d603c820f81ac284cd5be0a944d6'
@@ -192,6 +199,7 @@ describe('Common Blockchain Interface', function () {
   })
 
   describe('#blocks.get', function () {
+    var node = newNode()
     var blockBuffer = new Buffer(blockData, 'hex')
 
     var block = Block.fromBuffer(blockBuffer)
@@ -212,6 +220,7 @@ describe('Common Blockchain Interface', function () {
   })
 
   describe('#blocks.summary', function () {
+    var node = newNode()
     var blockBuffer = new Buffer(blockData, 'hex')
 
     var block = Block.fromBuffer(blockBuffer)
@@ -236,6 +245,39 @@ describe('Common Blockchain Interface', function () {
         bs[0].blockSize.should.equal(232714)
         bs[0].timestamp.should.equal(1424818934)
         bs[0].txCount.should.equal(182)
+
+        done()
+      })
+    })
+  })
+
+  describe('#blocks.latest', function () {
+    var node = newNode()
+    var blockBuffer = new Buffer(blockData, 'hex')
+
+    var block = Block.fromBuffer(blockBuffer)
+
+    var blockIndex = { height: 10 }
+
+    var cbs = new CommonBlockchain({ node: node })
+
+    it('should return block summaries', function (done) {
+      node.services.bitcoind.getBlock = sinon.stub().callsArgWith(1, null, blockBuffer)
+      node.services.bitcoind.getBlockIndex = sinon.stub().returns(blockIndex)
+      node.services.bitcoind.emit('tip', block)
+
+      cbs.blocks.latest(function (err, b) {
+        should.not.exist(err)
+
+        b.blockId.should.equal('00000000000000000593b60d8b4f40fd1ec080bdb0817d475dae47b5f5b1f735')
+        b.prevBlockId.should.equal('25c31a5ecbbdc9509e1ddf3330d0e08619213fec75d040170000000000000000')
+        b.merkleRootHash.should.equal('569070567854dd4cc9f6b82c6f5ba115e38b05f073575f983c471aab487f61dc')
+        b.nonce.should.equal(1970979152)
+        b.version.should.equal(2)
+        b.blockHeight.should.equal(10)
+        b.blockSize.should.equal(232714)
+        b.timestamp.should.equal(1424818934)
+        b.txCount.should.equal(182)
 
         done()
       })
