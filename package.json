@@ -16,6 +16,6 @@
     "async": "^1.5.2",
     "bitcore-lib": "^0.13.15",
     "body-parser": "^1.15.0",
-    "cb-express-router": "common-blockchain/cb-express-router"
+    "cb-express-router": "mvayngrib/cb-express-router"
   }
 }
