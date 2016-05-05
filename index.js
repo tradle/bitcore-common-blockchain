@@ -145,7 +145,7 @@ Addresses.prototype.transactions = function (addresses, blockHeight, callback) {
   var options = {
     start: Transaction.NLOCKTIME_MAX_VALUE,
     end: blockHeight || 0,
-    queryMempool: false
+    queryMempool: true
   }
 
   self.parent.node.services.address.getAddressHistory(addresses, options, function (err, result) {
@@ -177,7 +177,7 @@ Addresses.prototype.unspents = function (addresses, callback) {
 
   var self = this
 
-  self.parent.node.services.address.getUnspentOutputs(addresses, /* queryMempool = */ false, function (err, result) {
+  self.parent.node.services.address.getUnspentOutputs(addresses, /* queryMempool = */ true, function (err, result) {
     if (err) return callback(err)
 
     result = (result || []).map(function (unspent) {
@@ -215,7 +215,7 @@ Transactions.prototype.get = function (txids, callback) {
   async.map(
     txids,
     function (txid, reduce) {
-      self.parent.node.services.db.getTransactionWithBlockInfo(txid, /* queryMempool = */ false, function (err, tx) {
+      self.parent.node.services.db.getTransactionWithBlockInfo(txid, /* queryMempool = */ true, function (err, tx) {
         if (!err && tx) {
           // getTransactionWithBlockInfo sometimes returns a bogus transaction
           // for transactions that don't exist
@@ -249,7 +249,7 @@ Transactions.prototype.summary = function (txids, callback) {
   async.map(
     txids,
     function (txid, reduce) {
-      self.parent.node.services.db.getTransactionWithBlockInfo(txid, /* queryMempool = */ false, function (err, tx) {
+      self.parent.node.services.db.getTransactionWithBlockInfo(txid, /* queryMempool = */ true, function (err, tx) {
         if (err) return reduce(err)
 
         try {
