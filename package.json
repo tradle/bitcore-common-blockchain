@@ -6,7 +6,11 @@
   "scripts": {
     "test": "mocha test"
   },
-  "author": "Alexey Kudinkin <alexey.kudinkin@gmail.com> (http://github.com/alexeykudinkin)",
+  "author": {
+    "name": "Alexey Kudinkin",
+    "email": "alexey.kudinkin@gmail.com",
+    "url": "http://github.com/alexeykudinkin"
+  },
   "license": "MIT",
   "devDependencies": {
     "chai": "^3.5.0",
@@ -17,5 +21,12 @@
     "bitcore-lib": "^0.13.15",
     "body-parser": "^1.15.0",
     "cb-express-router": "mvayngrib/cb-express-router"
-  }
+  },
+  "readme": "# bitcore-common-blockchain\n\n[common-blockchain](https://github.com/common-blockchain/common-blockchain) service for [bitcore-node](https://github.com/bitpay/bitcore-node)\n\n# Install\n\n```bash\nbitcore-node install bitcore-common-blockchain\n```\n\n# Usage\n\nUse [cb-http-client](https://github.com/common-blockchain/cb-http-client) with the [common-blockchain](https://github.com/common-blockchain/common-blockchain) API against a bitcore node running this service.\n\n```js\n// assuming you have a local bitcore-node with its web server running on port 3001 (the default bitcore-node port):\nvar Blockchain = require('cb-http-client')\nvar blockchain = new Blockchain('http://127.0.0.1:3001/cb')\nblockchain.addresses.transactions(['mpNDUWcDcZw1Teo3LFHvr8usNdwDLKdTaY'], function (err, txs) {\n  // i want to do bad things to txs \n})\n```\n",
+  "readmeFilename": "README.md",
+  "gitHead": "6d9f8a9e813483ca35c0e977e322e8f976874ac9",
+  "_id": "bitcore-common-blockchain@1.1.0",
+  "_shasum": "9e8a581fd03957990cfc8b3ddd4aec4bfa845890",
+  "_from": "../bitcore-common-blockchain",
+  "_resolved": "file:../bitcore-common-blockchain"
 }

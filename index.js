@@ -24,6 +24,7 @@ var CommonBlockchainService = function (options) {
 
   BaseService.call(self, options)
 
+  self.bitcoind = this.node.services.bitcoind
   self.addresses = new Addresses({ parent: self })
   self.transactions = new Transactions({ parent: self })
   self.blocks = new Blocks({ parent: self })
@@ -31,7 +32,7 @@ var CommonBlockchainService = function (options) {
 
 inherits(CommonBlockchainService, BaseService)
 
-CommonBlockchainService.dependencies = [ 'address', 'db', 'bitcoind' ]
+CommonBlockchainService.dependencies = [ 'bitcoind' ]
 
 CommonBlockchainService.prototype.getAPIMethods = function () {
   return [
@@ -46,7 +47,7 @@ CommonBlockchainService.prototype.getAPIMethods = function () {
 
     [ 'blocks#get', this, this.blocks.get, 1 ],
     [ 'blocks#summary', this, this.blocks.summary, 1 ],
-    // [ 'blocks#latest', this, this.blocks.latest, 1 ],
+    [ 'blocks#latest', this, this.blocks.latest, 1 ],
     // [ 'blocks#propagate', this, this.blocks.propagate, 1 ]
   ]
 }
@@ -65,7 +66,7 @@ CommonBlockchainService.prototype.setupRoutes = function (app, express) {
     extended: true
   }))
 
-  app.use(cbRouter(this))
+  app.use(cbRouter(this, { validateResponse: false }))
 
   function extractAddresses (addrs) {
     if (!addrs) return null
@@ -91,6 +92,7 @@ CommonBlockchainService.prototype.getRoutePrefix = function () {
 function CommonBlockchainMicroService (options) {
   EventEmitter.call(this)
   this.parent = options.parent
+  this.bitcoind = this.parent.bitcoind
 }
 
 inherits(CommonBlockchainMicroService, EventEmitter)
@@ -108,7 +110,6 @@ inherits(Addresses, CommonBlockchainMicroService)
  * @param callback
  */
 Addresses.prototype.summary = function (addresses, callback) {
-  // TODO: Replace with `typeforce`
   $.checkArgument(Array.isArray(addresses), 'Must provide an array of addresses!')
 
   var self = this
@@ -116,7 +117,7 @@ Addresses.prototype.summary = function (addresses, callback) {
   async.map(
     addresses,
     function (addr, reduce) {
-      self.parent.node.services.address.getAddressSummary(addr, { noTxList: true }, function (err, result) {
+      self.bitcoind.getAddressSummary(addr, { noTxList: true }, function (err, result) {
         reduce(err, !err && {
           address: addr,
           balance: result['balance'],
@@ -137,27 +138,27 @@ Addresses.prototype.summary = function (addresses, callback) {
  * @param callback
  */
 Addresses.prototype.transactions = function (addresses, blockHeight, callback) {
-  // TODO: Replace with `typeforce`
   $.checkArgument(Array.isArray(addresses), 'Must provide an array of addresses!')
 
   var self = this
 
   var options = {
-    start: Transaction.NLOCKTIME_MAX_VALUE,
+    start: Transaction.NLOCKTIME_BLOCKHEIGHT_LIMIT,
     end: blockHeight || 0,
     queryMempool: true
   }
 
-  self.parent.node.services.address.getAddressHistory(addresses, options, function (err, result) {
+  self.bitcoind.getAddressHistory(addresses, options, function (err, result) {
     if (err) return callback(err)
 
     result = (result.items || []).map(function (item) {
       var tx = item.tx
       return {
-        blockHeight: item.height,
-        blockId: tx.blockHash,
-        txId: tx.id,
-        txHex: tx.serialize( /* unsafe = */ true)
+        blockHeight: tx.height || item.height,
+        blockId: tx.blockHash || item.blockHash,
+        txId: tx.hash,
+        // txId: reverseHex(tx.hash),
+        txHex: tx.hex || tx.serialize(true /* unsafe */)
       }
     })
 
@@ -172,12 +173,11 @@ Addresses.prototype.transactions = function (addresses, blockHeight, callback) {
  * @param callback
  */
 Addresses.prototype.unspents = function (addresses, callback) {
-  // TODO: Replace with `typeforce`
   $.checkArgument(Array.isArray(addresses), 'Must provide an array of addresses!')
 
   var self = this
 
-  self.parent.node.services.address.getUnspentOutputs(addresses, /* queryMempool = */ true, function (err, result) {
+  self.bitcoind.getAddressUnspentOutputs(addresses, /* queryMempool = */ true, function (err, result) {
     if (err) return callback(err)
 
     result = (result || []).map(function (unspent) {
@@ -207,7 +207,6 @@ inherits(Transactions, CommonBlockchainMicroService)
  * @param callback
  */
 Transactions.prototype.get = function (txids, callback) {
-  // TODO: Replace with `typeforce`
   $.checkArgument(Array.isArray(txids), 'Must provide an array of tx-ids!')
 
   var self = this
@@ -215,7 +214,7 @@ Transactions.prototype.get = function (txids, callback) {
   async.map(
     txids,
     function (txid, reduce) {
-      self.parent.node.services.db.getTransactionWithBlockInfo(txid, /* queryMempool = */ true, function (err, tx) {
+      self.bitcoind.getDetailedTransaction(txid, /* queryMempool = */ true, function (err, tx) {
         if (!err && tx) {
           // getTransactionWithBlockInfo sometimes returns a bogus transaction
           // for transactions that don't exist
@@ -241,7 +240,6 @@ Transactions.prototype.get = function (txids, callback) {
  * @param callback
  */
 Transactions.prototype.summary = function (txids, callback) {
-  // TODO: Replace with `typeforce`
   $.checkArgument(Array.isArray(txids), 'Must provide an array of tx-ids!')
 
   var self = this
@@ -249,7 +247,7 @@ Transactions.prototype.summary = function (txids, callback) {
   async.map(
     txids,
     function (txid, reduce) {
-      self.parent.node.services.db.getTransactionWithBlockInfo(txid, /* queryMempool = */ true, function (err, tx) {
+      self.bitcoind.getDetailedTransaction(txid, /* queryMempool = */ true, function (err, tx) {
         if (err) return reduce(err)
 
         try {
@@ -288,7 +286,6 @@ Transactions.prototype.summary = function (txids, callback) {
  * @param callback
  */
 Transactions.prototype.propagate = function (txs, callback) {
-  // TODO: Replace with `typeforce`
   $.checkArgument(Array.isArray(txs), 'Must provide an object from where to extract data')
 
   var self = this
@@ -296,7 +293,7 @@ Transactions.prototype.propagate = function (txs, callback) {
   async.map(
     txs,
     function (tx, reduce) {
-      self.parent.node.services.db.sendTransaction(tx, reduce)
+      self.bitcoind.sendTransaction(tx, reduce)
     },
     callback
   )
@@ -306,35 +303,31 @@ function Blocks (options) {
   var self = this
   CommonBlockchainMicroService.call(this, options)
 
-  this.height = null
-  this.tip = null
-  this.once('tip', function () {
-    self.emit('ready')
-  })
-
-  this.parent.node.services.bitcoind.on('tip', function (height) {
-    self.height = height
-    self.parent.node.services.bitcoind.getBlock(height, function (err, buf) {
-      if (err || !buf) return
-
-      self.tip = Block.fromBuffer(buf)
-      tipSummary = null
-      self.emit('tip', self.tip)
+  self.tip = null
+  var height = self.bitcoind.height
+  if (height) {
+    loadTip(height)
+  } else {
+    this.once('tip', function () {
+      self.emit('ready')
     })
-  })
+  }
+
+  this.bitcoind.on('tip', loadTip)
 
   // lazy calc tip summary
-  var tipSummary
-  Object.defineProperty(this, 'tipSummary', {
-    get: function () {
-      if (!self.tip) return
-      if (!tipSummary) {
-        tipSummary = self._getBlockSummary(self.tip)
-      }
 
-      return tipSummary
-    }
-  })
+  function loadTip (height) {
+    self.height = height
+    self.bitcoind.getBlockHeader(height, function (err, header) {
+      if (err || !header) return
+
+      header.height = height
+      self.tip = header
+      self.tipSummary = self._getBlockSummary(self.tip)
+      self.emit('tip', self.tip)
+    })
+  }
 }
 
 inherits(Blocks, CommonBlockchainMicroService)
@@ -346,7 +339,6 @@ inherits(Blocks, CommonBlockchainMicroService)
  * @param callback
  */
 Blocks.prototype.get = function (hashes, callback) {
-  // TODO: Replace with `typeforce`
   $.checkArgument(Array.isArray(hashes), 'Must provide an array of block-hashes!')
 
   var self = this
@@ -354,7 +346,7 @@ Blocks.prototype.get = function (hashes, callback) {
   async.map(
     hashes,
     function (hash, reduce) {
-      self.parent.node.services.db.getBlock(hash, function (err, block) {
+      self.bitcoind.getBlock(hash, function (err, block) {
         reduce(err, !err && {
           blockId: block.id,
           blockHex: block.toString()
@@ -374,7 +366,6 @@ Blocks.prototype.get = function (hashes, callback) {
 Blocks.prototype.summary = function (hashes, callback) {
   var self = this
 
-  // TODO: Replace with `typeforce`
   $.checkArgument(Array.isArray(hashes), 'Must provide an array of block-hashes!')
 
   var self = this
@@ -382,29 +373,41 @@ Blocks.prototype.summary = function (hashes, callback) {
   async.map(
     hashes,
     function (hash, reduce) {
-      self.parent.node.services.db.getBlock(hash, function (err, block) {
-        reduce(err, !err && self._getBlockSummary(block, hash))
+      self.bitcoind.getBlockHeader(hash, function (err, header) {
+        reduce(err, !err && self._getBlockSummary(header, hash))
       })
     },
     callback
   )
 }
 
-Blocks.prototype._getBlockSummary = function (block, hash) {
-  hash = hash || block.hash
-  var blockIndex = this.parent.node.services.bitcoind.getBlockIndex(hash)
-  var blockSize = block.toString().length
+Blocks.prototype._getBlockSummary = function (header) {
+  // header looks like:
+  // {
+  //   hash: result.hash,
+  //   version: result.version,
+  //   confirmations: result.confirmations,
+  //   height: result.height,
+  //   chainWork: result.chainwork,
+  //   prevHash: result.previousblockhash,
+  //   nextHash: result.nextblockhash,
+  //   merkleRoot: result.merkleroot,
+  //   time: result.time,
+  //   medianTime: result.mediantime,
+  //   nonce: result.nonce,
+  //   bits: result.bits,
+  //   difficulty: result.difficulty
+  // };
 
   return {
-    blockId: block.id,
-    prevBlockId: block.header.prevHash.toString('hex'),
-    merkleRootHash: block.header.merkleRoot.toString('hex'),
-    nonce: block.header.nonce,
-    version: block.header.version,
-    blockHeight: blockIndex.height,
-    blockSize: blockSize,
-    timestamp: block.header.timestamp,
-    txCount: block.transactions.length
+    blockId: header.hash,
+    prevBlockId: getId(header, 'prevHash'),
+    merkleRootHash: getId(header, 'merkleRoot'),
+    nonce: header.nonce,
+    version: header.version,
+    blockHeight: header.height,
+    timestamp: header.time,
+    // txCount: block.transactions.length
   }
 }
 
@@ -446,6 +449,24 @@ CommonBlockchainService.prototype.start = function (done) {
  */
 CommonBlockchainService.prototype.stop = function (done) {
   setImmediate(done)
+}
+
+function reverseHex (str) {
+  if (Buffer.isBuffer(str)) return Array.prototype.reverse.call(str).toString('hex')
+
+  if (str.length % 2) str = '0' + str
+
+  var arr = []
+  while (str.length) {
+    arr.push(str.slice(-2))
+    str = str.slice(0, -2)
+  }
+
+  return arr.join('')
+}
+
+function getId (header, prop) {
+  return header.toJSON ? reverseHex(header[prop]) : header[prop].toString('hex')
 }
 
 module.exports = CommonBlockchainService
