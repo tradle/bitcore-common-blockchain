@@ -180,11 +180,12 @@ Addresses.prototype.unspents = function (addresses, callback) {
   self.bitcoind.getAddressUnspentOutputs(addresses, /* queryMempool = */ true, function (err, result) {
     if (err) return callback(err)
 
+    var chainHeight = self.bitcoind.height
     result = (result || []).map(function (unspent) {
       return {
         address: unspent.address,
         txId: unspent.txid,
-        confirmations: unspent.confirmations,
+        confirmations: chainHeight - (unspent.height || chainHeight),
         value: unspent.satoshis,
         vout: unspent.outputIndex
       }
