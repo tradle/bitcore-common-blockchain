@@ -24,7 +24,9 @@ var CommonBlockchainService = function (options) {
 
   BaseService.call(self, options)
 
-  self.bitcoind = this.node.services.bitcoind
+  self.bitcoind = self.node.services.bitcoind
+  if (self.bitcoind.node) self.bitcoind = self.bitcoind.node
+
   self.addresses = new Addresses({ parent: self })
   self.transactions = new Transactions({ parent: self })
   self.blocks = new Blocks({ parent: self })
